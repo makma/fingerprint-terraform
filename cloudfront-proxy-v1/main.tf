@@ -38,10 +38,33 @@ variable "behavior_path_pattern" {
   type = string
   default = "behavior-path/*"
 }
+
+variable "cloudflare_zone_id" {
+  type = string
+  default = "681ec2df3edaf4db245f2add56749078"
+}
+
+variable "subdomain_name" {
+  type = string
+  default = "cloudfront-v1-terraform"
+}
 // End of configuration
 
 provider "aws" {
   region = var.selected_region
+}
+
+terraform {
+  required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
+  }
+}
+
+provider "cloudflare" {
+  api_token = "" # use your Cloudflare API token
 }
 
 resource "aws_cloudformation_stack" "fingerprint_proxy_stack-via-terraform" {
@@ -134,4 +157,14 @@ resource "aws_cloudfront_distribution" "fingerprint-cloudfront-integration-v1-vi
       restriction_type = "none"
     }
   }
+}
+
+# Add a CNAME recortd to point to the created CloudFront distribution, use your name server provider instead
+resource "cloudflare_record" "cname_record" {
+  zone_id = var.cloudflare_zone_id
+  name    = var.subdomain_name
+  value   = aws_cloudfront_distribution.fingerprint-cloudfront-integration-v1-via-terraform.domain_name
+  type    = "CNAME"
+  comment = "Fingerprint CloudFront proxy integration via Terraform"
+  ttl     = 3600
 }
