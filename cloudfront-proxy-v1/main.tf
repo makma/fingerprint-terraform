@@ -1,26 +1,26 @@
 // Configuration
 variable "selected_region" {
-  type = string
+  type    = string
   default = "us-east-1"
 }
 
 variable "secret_region" {
-  type = string
+  type    = string
   default = "us-east-2"
 }
 
 variable "secret_name" {
-  type = string
+  type    = string
   default = "fingerprint-pro-secret"
 }
 
 variable "distribution_name" {
-  type = string
+  type    = string
   default = "FingerprintProCloudfrontIntegrationv1ViaTerraform"
 }
 
 variable "cloudformation_template_url" {
-  type = string
+  type    = string
   default = "https://fingerprint-pro-cloudfront-integration-lambda-function.s3.amazonaws.com/release/minimal-template.yml"
 }
 
@@ -30,22 +30,22 @@ variable "aliases" {
 }
 
 variable "certificate_arn" {
-  type = string
+  type    = string
   default = "arn:aws:acm:us-east-1:912961505495:certificate/398919bf-5273-45a8-8301-a89a5f892e16"
 }
 
 variable "behavior_path_pattern" {
-  type = string
+  type    = string
   default = "behavior-path/*"
 }
 
 variable "cloudflare_zone_id" {
-  type = string
+  type    = string
   default = "681ec2df3edaf4db245f2add56749078"
 }
 
 variable "subdomain_name" {
-  type = string
+  type    = string
   default = "cloudfront-v1-terraform"
 }
 // End of configuration
@@ -70,12 +70,310 @@ provider "cloudflare" {
 resource "aws_cloudformation_stack" "fingerprint_proxy_stack-via-terraform" {
   name = var.distribution_name
 
-  template_url = var.cloudformation_template_url
-  
   parameters = {
     SecretName   = var.secret_name
     SecretRegion = var.secret_region
   }
+
+  template_body = <<EOF
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Transform": "AWS::Serverless-2016-10-31",
+    "Description": "Minimal template for Fingerprint Pro Lambda@Edge function for CloudFront integration",
+    "Parameters": {
+        "SecretName": {
+            "AllowedPattern": "^([a-zA-Z0-9\\/_+=.@\\-])+$",
+            "Description": "AWS Secret Name",
+            "Type": "String"
+        },
+        "SecretRegion": {
+            "AllowedPattern": "^([a-z0-9\\-])+$",
+            "Description": "AWS Region where secret is stored",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "FpIntLambdaFunctionExecutionRole": {
+            "Type": "AWS::IAM::Role",
+            "Metadata": {
+                "SamResourceId": "FpIntLambdaFunctionExecutionRole"
+            },
+            "Properties": {
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "fingerprint-pro-lambda-role",
+                            {
+                                "Fn::Select": [
+                                    4,
+                                    {
+                                        "Fn::Split": [
+                                            "-",
+                                            {
+                                                "Fn::Select": [
+                                                    2,
+                                                    {
+                                                        "Fn::Split": [
+                                                            "/",
+                                                            {
+                                                                "Ref": "AWS::StackId"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "sts:AssumeRole",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com",
+                                    "edgelambda.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "LambdaExecutionPolicy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": "arn:aws:logs:*:*:*"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "AWSSecretAccess",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "secretsmanager:GetSecretValue"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": "arn:aws:secretsmanager:$${SecretRegion}:$${AWS::AccountId}:secret:$${SecretName}-??????"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+                ]
+            }
+        },
+        "FingerprintProCloudfrontLambda": {
+            "Type": "AWS::Serverless::Function",
+            "Properties": {
+                "FunctionName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "fingerprint-pro-cloudfront-lambda",
+                            {
+                                "Fn::Select": [
+                                    4,
+                                    {
+                                        "Fn::Split": [
+                                            "-",
+                                            {
+                                                "Fn::Select": [
+                                                    2,
+                                                    {
+                                                        "Fn::Split": [
+                                                            "/",
+                                                            {
+                                                                "Ref": "AWS::StackId"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Handler": "fingerprintjs-pro-cloudfront-lambda-function.handler",
+                "Runtime": "nodejs16.x",
+                "CodeUri": "s3://fingerprint-pro-cloudfront-integration-lambda-function/release/lambda_latest.zip",
+                "MemorySize": 128,
+                "Timeout": 3,
+                "Role": {
+                    "Fn::GetAtt": [
+                        "FpIntLambdaFunctionExecutionRole",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+        "FingerprintProCDNCachePolicy": {
+            "Type": "AWS::CloudFront::CachePolicy",
+            "Properties": {
+                "CachePolicyConfig": {
+                    "Name": {
+                        "Fn::Join": [
+                            "-",
+                            [
+                                "FingerprintProCDNCachePolicy",
+                                {
+                                    "Fn::Select": [
+                                        4,
+                                        {
+                                            "Fn::Split": [
+                                                "-",
+                                                {
+                                                    "Fn::Select": [
+                                                        2,
+                                                        {
+                                                            "Fn::Split": [
+                                                                "/",
+                                                                {
+                                                                    "Ref": "AWS::StackId"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        ]
+                    },
+                    "MinTTL": 0,
+                    "MaxTTL": 180,
+                    "DefaultTTL": 180,
+                    "ParametersInCacheKeyAndForwardedToOrigin": {
+                        "CookiesConfig": {
+                            "CookieBehavior": "none"
+                        },
+                        "HeadersConfig": {
+                            "HeaderBehavior": "none"
+                        },
+                        "QueryStringsConfig": {
+                            "QueryStringBehavior": "whitelist",
+                            "QueryStrings": [
+                                "version",
+                                "loaderVersion"
+                            ]
+                        },
+                        "EnableAcceptEncodingBrotli": true,
+                        "EnableAcceptEncodingGzip": true
+                    }
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "LambdaFunctionName": {
+            "Description": "Fingerprint Pro Lambda function name",
+            "Value": {
+                "Ref": "FingerprintProCloudfrontLambda"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "fingerprint-pro-cloudfront-lambda",
+                            {
+                                "Fn::Select": [
+                                    4,
+                                    {
+                                        "Fn::Split": [
+                                            "-",
+                                            {
+                                                "Fn::Select": [
+                                                    2,
+                                                    {
+                                                        "Fn::Split": [
+                                                            "/",
+                                                            {
+                                                                "Ref": "AWS::StackId"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                }
+            }
+        },
+        "CachePolicyName": {
+            "Description": "Cache policy name",
+            "Value": {
+                "Ref": "FingerprintProCDNCachePolicy"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "FingerprintProCDNCachePolicy",
+                            {
+                                "Fn::Select": [
+                                    4,
+                                    {
+                                        "Fn::Split": [
+                                            "-",
+                                            {
+                                                "Fn::Select": [
+                                                    2,
+                                                    {
+                                                        "Fn::Split": [
+                                                            "/",
+                                                            {
+                                                                "Ref": "AWS::StackId"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                }
+            }
+        }
+    }
+}
+EOF
 
   // CAPABILITY_AUTO_EXPAND is required for the above CF template to execute successfully.
   capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND", "CAPABILITY_NAMED_IAM"]
@@ -86,7 +384,7 @@ resource "aws_cloudfront_distribution" "fingerprint-cloudfront-integration-v1-vi
   enabled = true
   comment = "Fingerprint CloudFront Integration v1 created via Terraform"
 
-   aliases = var.aliases
+  aliases = var.aliases
 
   origin {
     domain_name = "fpcdn.io"
