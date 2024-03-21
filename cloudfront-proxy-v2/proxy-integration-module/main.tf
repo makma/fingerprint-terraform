@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.selected_region
+  region = var.region
 }
 
 resource "aws_cloudformation_stack" "fingerprint_cloudfront_v2_proxy_stack-via-terraform" {
@@ -16,6 +16,7 @@ resource "aws_cloudformation_stack" "fingerprint_cloudfront_v2_proxy_stack-via-t
 
   parameters = {
     ACMCertificateARN     = var.certificate_arn
+    DistributionId        = var.distribution_id
     DomainNames           = var.aliases
     FpjsAgentDownloadPath = var.agent_download_path
     FpjsBehaviorPath      = var.behavior_path

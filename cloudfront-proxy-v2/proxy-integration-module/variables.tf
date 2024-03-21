@@ -1,6 +1,11 @@
-variable "selected_region" {
+variable "region" {
   type        = string
-  description = "Region where the integration will be running"
+  description = "The AWS region"
+}
+
+variable "distribution_id" {
+  type        = string
+  description = "The distribution where the integration would be attache to. If empty, the new distribution will be created"
 }
 
 variable "distribution_name" {

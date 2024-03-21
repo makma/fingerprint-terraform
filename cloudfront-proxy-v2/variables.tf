@@ -1,3 +1,8 @@
+variable "distribution_id" {
+  type        = string
+  description = "The distribution where the integration would be attache to. If empty, the new distribution will be created"
+}
+
 variable "selected_region" {
   type        = string
   description = "Region where the integration will be running"
