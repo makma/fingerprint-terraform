@@ -12,6 +12,16 @@ module "proxy-integration-module" {
   certificate_arn     = var.certificate_arn
 }
 
+module "proxy-endpoint-overrides-module" {
+  source = "./proxy-endpoint-overrides-module"
+
+  region   = var.selected_region
+  secrets_id = module.proxy-integration-module.fingerprint_integration_settings_secret
+  fpjs_cdn_url_override = var.fpjs_cdn_url_override
+  fpjs_ingress_base_host_override = var.fpjs_ingress_base_host_override
+}
+
+
 data "aws_cloudfront_distribution" "created_distribution" {
   id = module.proxy-integration-module.cloudfront_distribution_id
 }

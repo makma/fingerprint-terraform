@@ -62,3 +62,13 @@ variable "cloudflare_api_token" {
   description = "Cloudflare API token to communicate via Cloudflare provider"
   sensitive   = true
 }
+
+variable "fpjs_cdn_url_override" {
+  type        = string
+  description = "CDN URL override"
+}
+
+variable "fpjs_ingress_base_host_override" {
+  type        = string
+  description = "Ingress API override"
+}
