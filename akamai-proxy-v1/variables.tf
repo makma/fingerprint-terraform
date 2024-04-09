@@ -28,3 +28,8 @@ variable "rule_format" {
   type = string
   default = "latest"
 }
+
+variable "fpjs_proxy_secret" {
+  type = string
+  sensitive = true
+}

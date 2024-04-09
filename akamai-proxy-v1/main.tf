@@ -58,7 +58,7 @@ data "akamai_property_rules_template" "rules" {
   }
   variables {
     name  = "fpjs_proxy_secret"
-    value = "" # add the value
+    value = var.fpjs_proxy_secret
     type  = "string"
   }
 }
