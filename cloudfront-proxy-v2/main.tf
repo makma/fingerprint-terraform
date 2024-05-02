@@ -6,7 +6,6 @@ module "proxy-integration-module" {
   distribution_id     = var.distribution_id
   aliases             = var.aliases
   proxy_secret        = var.proxy_secret
-  behavior_path       = var.behavior_path
   agent_download_path = var.agent_download_path
   result_path         = var.result_path
   certificate_arn     = var.certificate_arn
