@@ -29,11 +29,6 @@ variable "agent_download_path" {
   description = "Agent download path"
 }
 
-variable "behavior_path" {
-  type        = string
-  description = "Integration behavior path"
-}
-
 variable "result_path" {
   type        = string
   description = "Get result path"

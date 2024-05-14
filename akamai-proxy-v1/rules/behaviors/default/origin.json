@@ -7,12 +7,13 @@
     "forwardHostHeader": "ORIGIN_HOSTNAME",
     "httpPort": 80,
     "httpsPort": 443,
+    "ipVersion": "IPV4",
     "originCertificate": "",
     "originSni": true,
     "originType": "CUSTOMER",
     "ports": "",
     "trueClientIpClientSetting": false,
-    "trueClientIpHeader": "True-Client-IP",
+    "trueClientIpHeader": "FPJS-Proxy-Client-IP",
     "verificationMode": "PLATFORM_SETTINGS",
     "hostname": "${env.origin_hostname}"
   }

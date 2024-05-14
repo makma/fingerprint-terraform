@@ -23,7 +23,7 @@ resource "aws_cloudformation_stack" "fingerprint_proxy_stack-via-terraform-upgra
     SecretRegion = var.secret_region
   }
 
- template_url = var.cloudformation_template_url
+  template_url = var.cloudformation_template_url
 
   // CAPABILITY_AUTO_EXPAND is required for the above CF template to execute successfully.
   capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND", "CAPABILITY_NAMED_IAM"]
@@ -84,14 +84,16 @@ resource "aws_cloudfront_distribution" "fingerprint-cloudfront-integration-v1-vi
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
 
+    # Changed during the upgrade
     cache_policy_id          = aws_cloudformation_stack.fingerprint_proxy_stack-via-terraform-upgrading.outputs["CachePolicyName"]
     origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3" // All_viewer - https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html
 
-    # lambda_function_association {
-    #   event_type   = "origin-request"
-    #   lambda_arn   = format("%s%s:1", "arn:aws:lambda:us-east-1:912961505495:function:", aws_cloudformation_stack.fingerprint_proxy_stack-via-terraform-upgrading.outputs["LambdaFunctionName"])
-    #   include_body = true
-    # }
+    # Changed during the upgradem, for v1 needs to be assosiated manually
+    #  lambda_function_association {
+    #    event_type   = "origin-request"
+    #    lambda_arn   = aws_cloudformation_stack.fingerprint_cloudfront_upgrading_to_v2_proxy_stack_via_terraform.outputs["FingerprintProCloudFrontLambdaVersion"]
+    #    include_body = true
+    #  }
   }
 
   viewer_certificate {
