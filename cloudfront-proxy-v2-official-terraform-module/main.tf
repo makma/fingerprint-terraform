@@ -1,5 +1,6 @@
 module "fingerprint_cloudfront_integration" {
-  source = "git@github.com:necipallef/terraform-module-proxy-lambda.git/?ref=v0.7.0"
+  source = "fingerprintjs/fingerprint-cloudfront-proxy-integration/aws"
+  version = "1.0.0"
 
   fpjs_agent_download_path = var.download_path
   fpjs_get_result_path = var.result_path

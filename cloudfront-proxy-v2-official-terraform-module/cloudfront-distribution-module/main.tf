@@ -5,7 +5,10 @@ locals {
 
 resource "aws_cloudfront_distribution" "fpjs_cloudfront_distribution" {
     comment = "Fingerprint distribution (created via Terraform official Fingerprint module)"
-    
+
+    enabled = true
+    http_version = "http1.1"
+    price_class = "PriceClass_100"  
     aliases = var.aliases
 
     origin {
@@ -22,12 +25,6 @@ resource "aws_cloudfront_distribution" "fpjs_cloudfront_distribution" {
             value = var.fpjs_secret_manager_arn
         }
     }
-
-    enabled = true
-
-    http_version = "http1.1"
-
-    price_class = "PriceClass_100"
 
     default_cache_behavior {
         allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
