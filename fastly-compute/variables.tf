@@ -8,13 +8,6 @@ variable "domain_name" {
   description = "Domain name for the service"
 }
 
-// The Fastly Terraform provider does not provide a means to seed the Secret Store with secrets (this is because the values are persisted into the Terraform state file as plaintext). To populate the Secret Store with secrets please use the Fastly API directly or the Fastly CLI.
-variable "proxy_secret" {
-  type        = string
-  description = "Secret used for proxy authentication"
-  sensitive   = true
-}
-
 variable "fastly_api_key" {
   type        = string
   description = "Fastly API key for authentication"
@@ -53,9 +46,3 @@ variable "save_to_kv_store_plugin_enabled" {
   type        = string
   default     = "false"
 }
-
-variable "decryption_key" {
-  type        = string
-  description = "Decryption key for Fingerprint API responses"
-  sensitive   = true
-} 

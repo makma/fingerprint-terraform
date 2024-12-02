@@ -159,15 +159,15 @@ resource "null_resource" "link_resources" {
         --auto-yes || true
 
       # Create new secret entries
-      echo "${var.proxy_secret}" | FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry create \
+      FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry create \
         --store-id=${fastly_secretstore.fpjs_secrets.id} \
         --name=PROXY_SECRET \
-        --stdin
+        --file ./proxy-secret.txt
 
-      echo "${var.decryption_key}" | FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry create \
+      FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry create \
         --store-id=${fastly_secretstore.fpjs_secrets.id} \
         --name=DECRYPTION_KEY \
-        --stdin
+        --file ./decryption-key.txt
     EOT
   }
 }
