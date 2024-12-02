@@ -64,15 +64,23 @@ resource "fastly_configstore" "fpjs_config" {
 # Create Config Store Entries
 resource "fastly_configstore_entries" "fpjs_config_entries" {
   store_id = fastly_configstore.fpjs_config.id
+  manage_entries = true
   entries = {
     "AGENT_SCRIPT_DOWNLOAD_PATH" = var.agent_script_download_path
     "GET_RESULT_PATH"            = var.get_result_path
+    "OPEN_CLIENT_RESPONSE_PLUGINS_ENABLED" = var.open_client_response_plugins_enabled
+    "SAVE_TO_KV_STORE_PLUGIN_ENABLED" = var.save_to_kv_store_plugin_enabled
   }
 }
 
 # Create Secret Store
 resource "fastly_secretstore" "fpjs_secrets" {
   name = "Fingerprint_Compute_Secret_Store_${fastly_service_compute.fpjs_proxy.id}"
+}
+
+# Create KV Store
+resource "fastly_kvstore" "fpjs_results" {
+  name = "Fingerprint_Results_${fastly_service_compute.fpjs_proxy.id}"
 }
 
 # Output the service ID and URL
@@ -92,13 +100,16 @@ output "secret_store_id" {
   value = fastly_secretstore.fpjs_secrets.id
 }
 
+output "kv_store_id" {
+  value = fastly_kvstore.fpjs_results.id
+}
+
 # Add this resource to handle the linking
 resource "null_resource" "link_resources" {
-  depends_on = [
-    fastly_service_compute.fpjs_proxy,
-    fastly_configstore.fpjs_config,
-    fastly_secretstore.fpjs_secrets
-  ]
+  # This will cause the resource to be recreated on every apply
+  triggers = {
+    always_run = timestamp()
+  }
 
   provisioner "local-exec" {
     command = <<EOT
@@ -107,12 +118,6 @@ resource "null_resource" "link_resources" {
         --service-id=${fastly_service_compute.fpjs_proxy.id} \
         --version=active \
         --auto-yes
-      
-      # Add secret to secret store (using stdin to pass secret)
-      echo "${var.proxy_secret}" | FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry create \
-        --store-id=${fastly_secretstore.fpjs_secrets.id} \
-        --name=PROXY_SECRET \
-        --stdin
       
       # Create resource links
       FASTLY_API_TOKEN=${var.fastly_api_key} fastly resource-link create \
@@ -129,11 +134,40 @@ resource "null_resource" "link_resources" {
         --version=latest \
         --auto-yes
       
+      FASTLY_API_TOKEN=${var.fastly_api_key} fastly resource-link create \
+        --service-id=${fastly_service_compute.fpjs_proxy.id} \
+        --resource-id=${fastly_kvstore.fpjs_results.id} \
+        --name="Fingerprint_Results_${fastly_service_compute.fpjs_proxy.id}" \
+        --version=latest \
+        --auto-yes
+      
       # Activate the version
       FASTLY_API_TOKEN=${var.fastly_api_key} fastly service-version activate \
         --service-id=${fastly_service_compute.fpjs_proxy.id} \
         --version=latest \
         --auto-yes
+
+      # Update secrets - first delete existing entries if they exist
+      FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry delete \
+        --store-id=${fastly_secretstore.fpjs_secrets.id} \
+        --name=PROXY_SECRET \
+        --auto-yes || true
+
+      FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry delete \
+        --store-id=${fastly_secretstore.fpjs_secrets.id} \
+        --name=DECRYPTION_KEY \
+        --auto-yes || true
+
+      # Create new secret entries
+      echo "${var.proxy_secret}" | FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry create \
+        --store-id=${fastly_secretstore.fpjs_secrets.id} \
+        --name=PROXY_SECRET \
+        --stdin
+
+      echo "${var.decryption_key}" | FASTLY_API_TOKEN=${var.fastly_api_key} fastly secret-store-entry create \
+        --store-id=${fastly_secretstore.fpjs_secrets.id} \
+        --name=DECRYPTION_KEY \
+        --stdin
     EOT
   }
 }

@@ -40,4 +40,22 @@ variable "agent_script_download_path" {
 variable "get_result_path" {
   description = "Random path for identification results to avoid ad blockers"
   type        = string
+}
+
+variable "open_client_response_plugins_enabled" {
+  description = "Flag to enable/disable open client response plugins"
+  type        = string
+  default     = "false"
+}
+
+variable "save_to_kv_store_plugin_enabled" {
+  description = "Flag to enable/disable save to KV store plugin"
+  type        = string
+  default     = "false"
+}
+
+variable "decryption_key" {
+  type        = string
+  description = "Decryption key for Fingerprint API responses"
+  sensitive   = true
 } 

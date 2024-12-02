@@ -34,3 +34,5 @@
 */terraform.rc
 
 */.edgerc
+
+**/.terraform.lock.hcl
